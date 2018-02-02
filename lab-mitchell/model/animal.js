@@ -7,18 +7,19 @@ const debug = require('debug')('http:model-animal');
 const Animal = mongoose.Schema({
   'name': { type: String, require: true },
   'legs': { type: Number, require: true },
-  'album': { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'album' },
+  'mammal': { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'mammal' },
 }, { timestamps: true }); //adds createdAt && updatedAt properties
 
 
 Animal.pre('save', function (next) {
+  debug(`Animal.pre('save') ${Animal.mammal}`);
   Mammal.findById(this.mammal)
     .then(mammal => {
     // let trackIds = new Set(album.tracks)
     // trackIds.add(this._id)
     // album.tracks = [...trackIds]
-      mammal.tracks = [...new Set(mammal.animals).add(this._id)];
-      Mammal.findByIdAndUpdate(this.mammal, { animals: Mammal.animals });
+      mammal.animals = [...new Set(mammal.animals).add(this._id)];
+      Mammal.findByIdAndUpdate(this.mammal, { animals: mammal.animals });
       mammal.save();
     })
     .then(next)
@@ -26,6 +27,7 @@ Animal.pre('save', function (next) {
 });
 
 Animal.post('remove', function (doc, next) {
+  debug(`Animal.post('delete') animal: ${Animal.name}`);
   Mammal.findById(doc.mammal)
     .then(mammal => {
       mammal.animals = mammal.animals.filter(a => doc._id.toString() !== a.toString());
