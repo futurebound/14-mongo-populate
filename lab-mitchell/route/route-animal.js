@@ -11,17 +11,17 @@ module.exports = function (router) {
       debug(`${req.method}: ${req.url}`);
       if (req.params._id) { //if a specific ID being request, since no way to make 2 different GET requests with this pattern
         Animal.findById(req.params._id)
-          .then(animal => {
-            animal
-              ? res.status(200).json(animal)
-              : errorHandler(new Error('enoent'), res);
-          }) //.json sets content to application/json then stringifies the raw object
+          .then(animal => res.status(200).json(animal))
+          // animal
+          //   ? res.status(200).json(animal)
+          //   : errorHandler(new Error('enoent'), res);
+          //.json sets content to application/json then stringifies the raw object
           .catch(err => errorHandler(err, res));
       }
 
-      debug(`${Animal.find('animal')}`);
-      Animal.find(Animal)
-        // .then(animals => animals.map(a => a._id)) //will map, so each becomes just a thing of IDs
+      debug(`${Animal.find('/animal')}`);
+      Animal.find()
+        .then(animals => animals.map(a => a._id)) //will map, so each becomes just a thing of IDs
         .then(animal => res.status(200).json(animal))
         .catch(err => errorHandler(err, res));
     })
@@ -36,7 +36,9 @@ module.exports = function (router) {
     .put(bodyParser, (req, res) => {
       debug(`${req.method}: ${req.url}`);
       debug(`${req.body}`);
-      Animal.findByIdAndUpdate(req.params._id, req.body) //can pass options as 3rd argument
+      Animal.findByIdAndUpdate(req.params._id, req.body, { upsert: true, runValidators: true }) //can pass options as 3rd argument
+        .then(() => res.sendStatus(204))
+        .catch(err => errorHandler(err, res));
       // {UPSERT: TRUE} will allow for thing to be updated in case the property has been deleted or something
       // RUNVALIDATORS will run through && validate against your schema to check that all data is valid
       // Animal.findByIdAndUpdate(req.params._id, req.body, {upsert: true, runValidators: true, new: true})
@@ -48,16 +50,13 @@ module.exports = function (router) {
       // .then(animal => {
       //  animal ? res.status(201).json(animal) : res.sendStatus(204)
       // })
-
-      //
-
-        .then(() => res.sendStatus(204))
-        .catch(err => errorHandler(err, res));
     })
-
-    .delete((req, res) => {
+    
+    .delete ((req, res) => {
       debug(`${req.method}: ${req.url}`);
-      Animal.findByIdAndRemove(req.params._id)
+      if (!req.params._id) errorHandler(new Error('Validation Error: ID is required to find the record you wish to delete'), res);
+      Animal.findById(req.params._id)
+        .then(animal => animal.remove())
         .then(() => res.sendStatus(204))
         .catch(err => errorHandler(err, res));
     });
